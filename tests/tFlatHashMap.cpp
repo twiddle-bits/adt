@@ -6,6 +6,7 @@
 #include "adt/FlatHashMap.hpp"
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <string>
@@ -25,13 +26,13 @@ void flatHash()
 int N = 1000000;
 
 template <class T>
-void mapIntPerf(T & map)
+void mapIntPerf(T & map, char const * name)
 {
     auto t_start = std::chrono::high_resolution_clock::now();
     // million insertions
     for (int i = 0; i < N; ++i)
     {
-        map.insert({i, i});
+        testThat(map.insert({i, i}).second);
     }
     auto t_insert = std::chrono::high_resolution_clock::now();
     // 2 million finds
@@ -41,19 +42,19 @@ void mapIntPerf(T & map)
     }
     auto t_find = std::chrono::high_resolution_clock::now();
 
-    std::cout << "\n\tTime taken:\n"
-              << "\t- insert: " << std::chrono::duration<double, std::milli>(t_insert-t_start).count() << "ms.\n"
-              << "\t- find:   " << std::chrono::duration<double, std::milli>(t_find-t_insert).count() << "ms. ";
+    std::cout << "\n\t" << name << "<int, int>:    " << std::setw(5)
+              << std::chrono::duration<double, std::micro>(t_insert-t_start).count()/N << ", "
+              << std::chrono::duration<double, std::micro>(t_find-t_insert).count()/N << "\n";
 }
 
 template <class T>
-void mapStringPerf(T & map)
+void mapStringPerf(T & map, const char* name)
 {
     auto t_start = std::chrono::high_resolution_clock::now();
     // million insertions
     for (int i = 0; i < N; ++i)
     {
-        map.insert({std::to_string(i), i});
+        testThat(map.insert({std::to_string(i), i}).second);
     }
     auto t_insert = std::chrono::high_resolution_clock::now();
     // 2 million finds
@@ -63,33 +64,33 @@ void mapStringPerf(T & map)
     }
     auto t_find = std::chrono::high_resolution_clock::now();
 
-    std::cout << "\n\tTime taken:\n"
-              << "\t- insert: " << std::chrono::duration<double, std::milli>(t_insert-t_start).count() << "ms.\n"
-              << "\t- find:   " << std::chrono::duration<double, std::milli>(t_find-t_insert).count() << "ms. ";
+    std::cout << "\t" << name << "<string, int>: " << std::setw(6)
+              << std::chrono::duration<double, std::micro>(t_insert-t_start).count()/N << ", "
+              << std::chrono::duration<double, std::micro>(t_find-t_insert).count()/N << " ";
 }
 
 void flatHashPerf()
 {
     adt::FlatHashMap<int, int> map(a);
-    mapIntPerf(map);
+    mapIntPerf(map, "adt::FlatHashMap");
     adt::FlatHashMap<std::string, int> mapStr(a);
-    mapStringPerf(mapStr);
+    mapStringPerf(mapStr, "adt::FlatHashMap");
 }
 
 void stdMapPerf()
 {
     std::map<int, int> map;
-    mapIntPerf(map);
+    mapIntPerf(map, "std::map");
     std::map<std::string, int> mapStr;
-    mapStringPerf(mapStr);
+    mapStringPerf(mapStr, "std::map");
 }
 
 void stdUnordMapPerf()
 {
     std::unordered_map<int, int> map;
-    mapIntPerf(map);
+    mapIntPerf(map, "std::unordered_map");
     std::unordered_map<std::string, int> mapStr;
-    mapStringPerf(mapStr);
+    mapStringPerf(mapStr, "std::unordered_map");
 }
 
 defineSuite(tflathashmap_cpp)

@@ -4,7 +4,10 @@
 #ifndef adt_allocator_hpp
 #define adt_allocator_hpp
 
+#include "adt/exports.h"
+
 #include <cstdint>
+#include <cstdlib>
 
 namespace adt
 {
@@ -18,18 +21,18 @@ struct Allocator
     virtual ~Allocator() = default;
 };
 
-struct NullAllocator : public Allocator
+struct ADT_API NullAllocator : public Allocator
 {
-    MemAddr Allocate(size_t s) override { return 0; }
+    MemAddr Allocate(size_t s) override;
 
-    void Deallocate(MemAddr p) override { }
+    void Deallocate(MemAddr p) override;
 };
 
-struct LibcAllocator : public Allocator
+struct ADT_API LibcAllocator : public Allocator
 {
-    MemAddr Allocate(size_t s) override { return ::operator new(s); }
+    MemAddr Allocate(size_t s) override;
 
-    void Deallocate(MemAddr p) override { ::operator delete(p); }
+    void Deallocate(MemAddr p) override;
 };
 
 } // namespace adt

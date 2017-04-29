@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <utility>
 
@@ -22,22 +23,23 @@ struct FlatPairStorage
   public:
     struct ElementType
     {
-        K key;
-        V value;
-        bool deleted;
+        K first;
+        V second;
     };
   private:
     ElementType * array;
+    uint8_t * deleted;
     size_t size;
     Allocator * alloc;
   public:
-    FlatPairStorage(Allocator & A) : array(0), size(0), alloc(&A) { }
+    FlatPairStorage(Allocator & A) : array(0), deleted(0), size(0), alloc(&A) { }
 
     FlatPairStorage(FlatPairStorage const &) = delete;
 
-    FlatPairStorage(FlatPairStorage && rhs) : array(rhs.array), size(rhs.size), alloc(rhs.alloc)
+    FlatPairStorage(FlatPairStorage && rhs) : array(rhs.array), deleted(rhs.deleted), size(rhs.size), alloc(rhs.alloc)
     {
         rhs.array = 0;
+        rhs.deleted = 0;
         rhs.size = 0;
     }
 
@@ -45,6 +47,7 @@ struct FlatPairStorage
     {
         if (this == &rhs) return *this;
         std::swap(rhs.array, array);
+        std::swap(rhs.deleted, deleted);
         std::swap(rhs.size, size);
         std::swap(rhs.alloc, alloc);
         return *this;
@@ -55,6 +58,18 @@ struct FlatPairStorage
         Clear();
     }
 
+    bool IsDeleted(size_t i) const
+    {
+        return deleted[i >> 3] & (1 << (i & 7));
+    }
+
+    void SetDeleted(size_t i, bool value)
+    {
+        uint8_t mask = 1 << (i & 7);
+        size_t idx = i >> 3;
+        deleted[idx] = (deleted[idx] & ~mask) | (mask * value);
+    }
+
     Allocator & Alloc() const { return *alloc; }
 
     void Clear()
@@ -63,28 +78,30 @@ struct FlatPairStorage
         {
             for (size_t i = 0; i < size; ++i)
             {
-                if (!array[i].deleted)
+                if (!IsDeleted(i))
                 {
-                    array[i].key.~K();
-                    array[i].value.~V();
-                    array[i].deleted = true;
+                    array[i].first.~K();
+                    array[i].second.~V();
+                    SetDeleted(i, true);
                 }
             }
             alloc->Deallocate(array);
+            alloc->Deallocate(deleted);
+            array = 0;
+            deleted = 0;
         }
     }
 
     void Reset(size_t n = 0)
     {
         Clear();
+        if (n == 0) return;
         array = (ElementType *)alloc->Allocate(n * sizeof(ElementType));
+        auto num_bytes = (n + 7) >> 3;
+        deleted = (uint8_t *)alloc->Allocate(num_bytes);
+        for (size_t i = 0; i < num_bytes; ++i) deleted[i] = 0xFF;
+        if (!array || !deleted) assert(false && "Failed to allocate memory");
         size = n;
-        for (size_t i = 0; i < n; ++i)
-        {
-            array[i].deleted = true;
-            new ((void *)&array[i].key) K();
-            new ((void *)&array[i].value) V();
-        }
     }
 
     size_t Size() const
@@ -96,15 +113,6 @@ struct FlatPairStorage
     {
         return array;
     }
-
-    void Swap(FlatPairStorage & rhs)
-    {
-        assert(rhs.alloc == alloc);
-        std::swap(array, rhs.array);
-        std::swap(size, rhs.size);
-    }
-
-    using PairType = std::pair<K const, V>;
 };
 
 } // namespace detail
@@ -116,36 +124,57 @@ class FlatHashMap
     size_t curr_size;
     float load_factor;
 
-    struct Mover
-    {
-        static V && Do(V & v) { return std::move(v); }
-    };
-
-    struct Copier
-    {
-        static V const & Do(V & v) { return v; }
-    };
-
     void ReserveForSize(size_t n)
     {
         auto cap = (size_t)(n/load_factor);
         storage.Reset(cap);
     }
   public:
-    FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.5) { }
+    FlatHashMap(Allocator & a, float loadfac = 0.5) : storage(a), curr_size(0), load_factor(loadfac) { }
 
     void reserve(size_t n) { ReserveForSize(n); }
 
-    using Element = std::pair<K const, V>;
+    using value_type = std::pair<K const, V>;
 
-    using iterator = Element *;
-    using const_iterator = Element const *;
+    using iterator = value_type *;
+    using const_iterator = value_type const *;
+
+    size_t capacity() const
+    {
+        return storage.Size();
+    }
 
     size_t size() const
     {
         return curr_size;
-    }       
-    
+    }
+
+    const_iterator begin() const
+    {
+        return storage.Array();
+    }
+
+    const_iterator end() const
+    {
+        return 0;
+    }
+
+    iterator begin()
+    {
+        return storage.Array();
+    }
+
+    iterator end()
+    {
+        return 0;
+    }
+
+    // iterator erase(iterator where)
+    // {
+    //     assert(where >= begin() && where < begin() + capacity());
+    //     auto & 
+    // }
+
     const_iterator find(K const & k) const
     {
         if (curr_size == 0) return 0;
@@ -157,15 +186,15 @@ class FlatHashMap
         for (size_t num_checked = 0; num_checked < cap; ++num_checked)
         {
             auto idx = (hash + num_checked) % cap;
-            if (!array[idx].deleted && eq(array[idx].key, k))
+            if (!storage.IsDeleted(idx) && eq(array[idx].first, k))
             {
-                return reinterpret_cast<Element *>(&array[idx]);
+                return reinterpret_cast<value_type *>(&array[idx]);
             }
         }
         return 0;
     }
 
-    std::pair<iterator, bool> insert(Element const & e)
+    std::pair<iterator, bool> insert(value_type const & e)
     {
         if (curr_size != 0 && (curr_size + 1 < (size_t)(storage.Size()*load_factor)))
         {
@@ -173,18 +202,23 @@ class FlatHashMap
         }
 
         FlatHashMap<K, V>  new_map(storage.Alloc());
-        new_map.reserve(storage.Size() == 0 ? 6 : storage.Size());
-        auto cap = storage.Size();
-        auto array = storage.Array();
-        for (size_t i = 0; i < cap; ++i)
+        TransferElem(new_map);
+        std::swap(new_map.storage, storage);
+        std::swap(new_map.curr_size, curr_size);
+        std::swap(new_map.load_factor, load_factor);
+
+        return InsertNoResize(e);
+    }
+
+    std::pair<iterator, bool> insert(value_type && e)
+    {
+        if (curr_size != 0 && (curr_size + 1 < (size_t)(storage.Size()*load_factor)))
         {
-            if (!array[i].deleted)
-            {
-                auto & as_elem = *reinterpret_cast<iterator>(&array[i]);
-                new_map.InsertNoResize(as_elem);
-            }
+            return InsertNoResize(e);
         }
 
+        FlatHashMap<K, V>  new_map(storage.Alloc());
+        TransferElem(new_map);
         std::swap(new_map.storage, storage);
         std::swap(new_map.curr_size, curr_size);
         std::swap(new_map.load_factor, load_factor);
@@ -193,32 +227,22 @@ class FlatHashMap
     }
 
   private:
-    std::pair<iterator, bool> InsertNoResize(Element const & e)
+    void TransferElem(FlatHashMap<K, V> & new_map)
     {
+        new_map.reserve(storage.Size() == 0 ? 6 : storage.Size());
         auto cap = storage.Size();
-        auto hash = H()(e.first) % cap;
-        auto const & eq = E();
         auto array = storage.Array();
-        for (size_t num_checked = 0; num_checked < cap; ++num_checked)
+        for (size_t i = 0; i < cap; ++i)
         {
-            auto idx = (hash + num_checked) % cap;
-            if (array[idx].deleted)
+            if (!storage.IsDeleted(i))
             {
-                array[idx].deleted = false;
-                array[idx].key = e.first;
-                array[idx].value = e.second;
-                ++curr_size;
-                return std::make_pair(reinterpret_cast<Element *>(&array[idx]), true);
-            }
-            else if (eq(array[idx].key, e.first))
-            {
-                return std::make_pair(reinterpret_cast<Element *>(&array[idx]), false);
+                auto & as_elem = *reinterpret_cast<iterator>(&array[i]);
+                new_map.InsertNoResize(std::move(as_elem));
             }
         }
-        assert(false && "Should have inserted an element");
     }
 
-    std::pair<iterator, bool> InsertNoResize(Element && e)
+    std::pair<iterator, bool> InsertNoResize(value_type const & e)
     {
         auto cap = storage.Size();
         auto hash = H()(e.first) % cap;
@@ -227,17 +251,42 @@ class FlatHashMap
         for (size_t num_checked = 0; num_checked < cap; ++num_checked)
         {
             auto idx = (hash + num_checked) % cap;
-            if (array[idx].deleted)
+            if (storage.IsDeleted(idx))
             {
-                array[idx].deleted = false;
-                array[idx].key = std::move(e.first);
-                array[idx].value = std::move(e.second);
+                storage.SetDeleted(idx, false);
+                new ((void *)&array[idx].first) K(e.first);
+                new ((void *)&array[idx].second) V(e.second);
                 ++curr_size;
-                return std::make_pair(reinterpret_cast<Element *>(&array[idx]), true);
+                return std::make_pair(reinterpret_cast<value_type *>(&array[idx]), true);
             }
-            else if (eq(array[idx].key, e.first))
+            else if (eq(array[idx].first, e.first))
             {
-                return std::make_pair(reinterpret_cast<Element *>(&array[idx]), false);
+                return std::make_pair(reinterpret_cast<value_type *>(&array[idx]), false);
+            }
+        }
+        assert(false && "Should have inserted an value_type");
+    }
+
+    std::pair<iterator, bool> InsertNoResize(value_type && e)
+    {
+        auto cap = storage.Size();
+        auto hash = H()(e.first) % cap;
+        auto const & eq = E();
+        auto array = storage.Array();
+        for (size_t num_checked = 0; num_checked < cap; ++num_checked)
+        {
+            auto idx = (hash + num_checked) % cap;
+            if (storage.IsDeleted(idx))
+            {
+                storage.SetDeleted(idx, false);
+                new ((void *)&array[idx].first) K(std::move(e.first));
+                new ((void *)&array[idx].second) V(std::move(e.second));
+                ++curr_size;
+                return std::make_pair(reinterpret_cast<value_type *>(&array[idx]), true);
+            }
+            else if (eq(array[idx].first, e.first))
+            {
+                return std::make_pair(reinterpret_cast<value_type *>(&array[idx]), false);
             }
         }
         assert(false && "Should have inserted an element");
