@@ -14,5 +14,4 @@ MemAddr LibcAllocator::Allocate(size_t s) { return ::operator new(s); }
 
 void LibcAllocator::Deallocate(MemAddr p) { ::operator delete(p); }
 
-
 } // namespace adt
