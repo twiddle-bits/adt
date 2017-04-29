@@ -1,4 +1,4 @@
-/*! allocator.hpp */
+/*! Allocator.hpp */
 /* Copyright (c) 2017 Aaditya Kalsi */
 
 #ifndef adt_allocator_hpp

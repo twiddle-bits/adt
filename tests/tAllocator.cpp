@@ -3,7 +3,7 @@
 
 #include "defs.h"
 
-#include "adt/allocator.hpp"
+#include "adt/Allocator.hpp"
 
 void NullAlloc()
 {
