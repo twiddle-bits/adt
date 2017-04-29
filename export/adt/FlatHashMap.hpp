@@ -265,7 +265,7 @@ class FlatHashMap
             }
         }
         assert(false && "Should have inserted an value_type");
-        return (end(), false);
+        return std::make_pair(end(), false);
     }
 
     std::pair<iterator, bool> InsertNoResize(value_type && e)
@@ -291,7 +291,7 @@ class FlatHashMap
             }
         }
         assert(false && "Should have inserted an element");
-        return (end(), false);
+        return std::make_pair(end(), false);
     }
 };
 
