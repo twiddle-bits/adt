@@ -1,0 +1,48 @@
+/usr/local/bin/cmake -H/home/akalsi/adt/tests/install -B/home/akalsi/adt/tests/install/_build --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/bin/make -f CMakeFiles/Makefile2 tests_run
+make[1]: Entering directory '/home/akalsi/adt/tests/install/_build'
+/usr/local/bin/cmake -H/home/akalsi/adt/tests/install -B/home/akalsi/adt/tests/install/_build --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/local/bin/cmake -E cmake_progress_start /home/akalsi/adt/tests/install/_build/CMakeFiles 3
+/usr/bin/make -f CMakeFiles/Makefile2 CMakeFiles/tests_run.dir/all
+make[2]: Entering directory '/home/akalsi/adt/tests/install/_build'
+/usr/bin/make -f CMakeFiles/tests_install.dir/build.make CMakeFiles/tests_install.dir/depend
+make[3]: Entering directory '/home/akalsi/adt/tests/install/_build'
+cd /home/akalsi/adt/tests/install/_build && /usr/local/bin/cmake -E cmake_depends "Unix Makefiles" /home/akalsi/adt/tests/install /home/akalsi/adt/tests/install /home/akalsi/adt/tests/install/_build /home/akalsi/adt/tests/install/_build /home/akalsi/adt/tests/install/_build/CMakeFiles/tests_install.dir/DependInfo.cmake --color=
+Dependee "/home/akalsi/adt/tests/install/_build/CMakeFiles/tests_install.dir/DependInfo.cmake" is newer than depender "/home/akalsi/adt/tests/install/_build/CMakeFiles/tests_install.dir/depend.internal".
+Dependee "/home/akalsi/adt/tests/install/_build/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/akalsi/adt/tests/install/_build/CMakeFiles/tests_install.dir/depend.internal".
+Scanning dependencies of target tests_install
+make[3]: Leaving directory '/home/akalsi/adt/tests/install/_build'
+/usr/bin/make -f CMakeFiles/tests_install.dir/build.make CMakeFiles/tests_install.dir/build
+make[3]: Entering directory '/home/akalsi/adt/tests/install/_build'
+[ 33%] Building C object CMakeFiles/tests_install.dir/_source/driver.c.o
+/usr/bin/cc  -I/home/akalsi/adt/tests -isystem /home/akalsi/adt/_install/include   -o CMakeFiles/tests_install.dir/_source/driver.c.o   -c /home/akalsi/adt/tests/install/_source/driver.c
+[ 66%] Building C object CMakeFiles/tests_install.dir/_source/exports.c.o
+/usr/bin/cc  -I/home/akalsi/adt/tests -isystem /home/akalsi/adt/_install/include   -o CMakeFiles/tests_install.dir/_source/exports.c.o   -c /home/akalsi/adt/tests/install/_source/exports.c
+[100%] Linking C executable tests_install
+/usr/local/bin/cmake -E cmake_link_script CMakeFiles/tests_install.dir/link.txt --verbose=1
+/usr/bin/cc   -rdynamic CMakeFiles/tests_install.dir/_source/driver.c.o CMakeFiles/tests_install.dir/_source/exports.c.o  -o tests_install -Wl,-rpath,/home/akalsi/adt/_install/lib /home/akalsi/adt/_install/lib/libadt.so 
+make[3]: Leaving directory '/home/akalsi/adt/tests/install/_build'
+[100%] Built target tests_install
+/usr/bin/make -f CMakeFiles/tests_run.dir/build.make CMakeFiles/tests_run.dir/depend
+make[3]: Entering directory '/home/akalsi/adt/tests/install/_build'
+cd /home/akalsi/adt/tests/install/_build && /usr/local/bin/cmake -E cmake_depends "Unix Makefiles" /home/akalsi/adt/tests/install /home/akalsi/adt/tests/install /home/akalsi/adt/tests/install/_build /home/akalsi/adt/tests/install/_build /home/akalsi/adt/tests/install/_build/CMakeFiles/tests_run.dir/DependInfo.cmake --color=
+Dependee "/home/akalsi/adt/tests/install/_build/CMakeFiles/tests_run.dir/DependInfo.cmake" is newer than depender "/home/akalsi/adt/tests/install/_build/CMakeFiles/tests_run.dir/depend.internal".
+Dependee "/home/akalsi/adt/tests/install/_build/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/akalsi/adt/tests/install/_build/CMakeFiles/tests_run.dir/depend.internal".
+Scanning dependencies of target tests_run
+make[3]: Leaving directory '/home/akalsi/adt/tests/install/_build'
+/usr/bin/make -f CMakeFiles/tests_run.dir/build.make CMakeFiles/tests_run.dir/build
+make[3]: Entering directory '/home/akalsi/adt/tests/install/_build'
+./tests_install
+
+suite: exports
+   0  exportHdr: OK
+endsuite: exports
+
+TESTS PASSED: 1
+ALL OK
+
+make[3]: Leaving directory '/home/akalsi/adt/tests/install/_build'
+[100%] Built target tests_run
+make[2]: Leaving directory '/home/akalsi/adt/tests/install/_build'
+/usr/local/bin/cmake -E cmake_progress_start /home/akalsi/adt/tests/install/_build/CMakeFiles 0
+make[1]: Leaving directory '/home/akalsi/adt/tests/install/_build'

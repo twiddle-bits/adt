@@ -1,0 +1,20 @@
+# adtConfig.cmake
+
+# - Config file for the adt package
+# It defines the following variables
+#  ADT_INCLUDE_DIRS - include directories for adt
+#  ADT_LIBRARIES    - libraries to link against
+#  ADT_EXECUTABLE   - executable if any
+
+# Compute paths
+get_filename_component(ADT_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(ADT_INCLUDE_DIRS include)
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+if(NOT TARGET adt AND NOT ADT_BINARY_DIR)
+  include("${ADT_CMAKE_DIR}/adtTargets.cmake")
+endif()
+
+# These are IMPORTED targets created by adtTargets.cmake
+set(ADT_LIBRARIES adt)
+set(ADT_EXECUTABLE )
