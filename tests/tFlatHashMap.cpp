@@ -23,7 +23,7 @@ void flatHash()
     testThat(map.find(1)->second == 2);
 }
 
-int N = 1000000;
+int N = 100000;
 
 template <class T>
 void mapIntPerf(T & map, char const * name)
