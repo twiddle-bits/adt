@@ -26,6 +26,7 @@ script:
   - if [[ "`uname`" == "Linux" ]]; then sudo sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && sudo apt-get update -qq; fi
   - if [[ "`uname`" == "Linux" ]]; then sudo apt-get install cmake-data cmake; fi
   - if [[ "`uname`" == "Linux" ]]; then sudo apt-get install g++-4.8 gcc-4.8; fi
+  - if [[ "`uname`" == "Linux" ]]; then export CXX=g++-4.8 && export CC=gcc-4.8; fi
   - ./build.sh
   - ls -lhR _install/*
 
