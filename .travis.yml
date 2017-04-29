@@ -24,6 +24,7 @@ env:
 script:
   - if [[ "`uname`" == "Linux" ]]; then sudo add-apt-repository -y ppa:george-edison55/precise-backports && sudo apt-get update; fi
   - if [[ "`uname`" == "Linux" ]]; then sudo apt-get install cmake-data cmake; fi
+  - if [[ "`uname`" == "Darwin" ]]; then brew install clang++; fi
   - ./build.sh
   - ls -lhR _install/*
 

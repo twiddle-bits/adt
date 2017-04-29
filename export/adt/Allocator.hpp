@@ -14,21 +14,24 @@ namespace adt
 
 using MemAddr = void *;
 
-struct ADT_API Allocator
+class ADT_API Allocator
 {
+  public:
     virtual ~Allocator() = default;
     virtual MemAddr Allocate(size_t s) = 0;
     virtual void Deallocate(MemAddr p) = 0;
 };
 
-struct ADT_API NullAllocator : public Allocator
+class ADT_API NullAllocator : public Allocator
 {
+  public:
     MemAddr Allocate(size_t s) override;
     void Deallocate(MemAddr p) override;
 };
 
-struct ADT_API LibcAllocator : public Allocator
+class ADT_API LibcAllocator : public Allocator
 {
+  public:
     MemAddr Allocate(size_t s) override;
     void Deallocate(MemAddr p) override;
 };
