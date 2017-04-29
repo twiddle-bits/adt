@@ -20,7 +20,7 @@ build_script:
   - dir .
   - set "PATH=%PATH:C:\Program Files (x86)\Git\bin=%"
   - mkdir _build && cd _build
-  - cmake -DCMAKE_INSTALL_PREFIX=_install ..
+  - cmake -DCMAKE_INSTALL_PREFIX=_install -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% -DBUILD_SHARED_LIBS=%BUILD_SHARED_LIBS% ..
   - cmake --build . --config %CMAKE_BUILD_TYPE%
   - cmake --build . --config %CMAKE_BUILD_TYPE% --target tests
   - cmake --build . --config %CMAKE_BUILD_TYPE% --target install
