@@ -132,7 +132,7 @@ class FlatHashMap
         storage.Reset(cap);
     }
   public:
-    FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.75) { }
+    FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.5) { }
 
     void reserve(size_t n) { ReserveForSize(n); }
 
@@ -180,7 +180,7 @@ class FlatHashMap
         {
             if (!array[i].deleted)
             {
-                auto const & as_elem = *reinterpret_cast<iterator>(&array[i]);
+                auto & as_elem = *reinterpret_cast<iterator>(&array[i]);
                 new_map.InsertNoResize(as_elem);
             }
         }
@@ -207,6 +207,31 @@ class FlatHashMap
                 array[idx].deleted = false;
                 array[idx].key = e.first;
                 array[idx].value = e.second;
+                ++curr_size;
+                return std::make_pair(reinterpret_cast<Element *>(&array[idx]), true);
+            }
+            else if (eq(array[idx].key, e.first))
+            {
+                return std::make_pair(reinterpret_cast<Element *>(&array[idx]), false);
+            }
+        }
+        assert(false && "Should have inserted an element");
+    }
+
+    std::pair<iterator, bool> InsertNoResize(Element && e)
+    {
+        auto cap = storage.Size();
+        auto hash = H()(e.first) % cap;
+        auto const & eq = E();
+        auto array = storage.Array();
+        for (size_t num_checked = 0; num_checked < cap; ++num_checked)
+        {
+            auto idx = (hash + num_checked) % cap;
+            if (array[idx].deleted)
+            {
+                array[idx].deleted = false;
+                array[idx].key = std::move(e.first);
+                array[idx].value = std::move(e.second);
                 ++curr_size;
                 return std::make_pair(reinterpret_cast<Element *>(&array[idx]), true);
             }

@@ -22,20 +22,22 @@ void flatHash()
     testThat(map.find(1)->second == 2);
 }
 
+int N = 1000000;
+
 template <class T>
 void mapIntPerf(T & map)
 {
     auto t_start = std::chrono::high_resolution_clock::now();
     // million insertions
-    for (int i = 0; i < 1000000; ++i)
+    for (int i = 0; i < N; ++i)
     {
         map.insert({i, i});
     }
     auto t_insert = std::chrono::high_resolution_clock::now();
     // 2 million finds
-    for (int i = 0; i < 2*1000000; ++i)
+    for (int i = 0; i < 2*N; ++i)
     {
-        testThat(map.find(i % 1000000)->second == (i % 1000000));
+        testThat(map.find(i % N)->second == (i % N));
     }
     auto t_find = std::chrono::high_resolution_clock::now();
 
@@ -49,15 +51,15 @@ void mapStringPerf(T & map)
 {
     auto t_start = std::chrono::high_resolution_clock::now();
     // million insertions
-    for (int i = 0; i < 1000000; ++i)
+    for (int i = 0; i < N; ++i)
     {
         map.insert({std::to_string(i), i});
     }
     auto t_insert = std::chrono::high_resolution_clock::now();
     // 2 million finds
-    for (int i = 0; i < 2*1000000; ++i)
+    for (int i = 0; i < 2*N; ++i)
     {
-        testThat(map.find(std::to_string(i % 1000000))->second == (i % 1000000));
+        testThat(map.find(std::to_string(i % N))->second == (i % N));
     }
     auto t_find = std::chrono::high_resolution_clock::now();
 
@@ -92,6 +94,10 @@ void stdUnordMapPerf()
 
 defineSuite(tflathashmap_cpp)
 {
+    if (auto env = getenv("N"))
+    {
+        N = atoi(env);
+    }
     addTest(flatHash);
     addTest(flatHashPerf);
     addTest(stdMapPerf);
