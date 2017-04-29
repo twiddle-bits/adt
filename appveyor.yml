@@ -5,7 +5,7 @@ image: Visual Studio 2015
 
 # Configuration
 environment:
-  UNUSED: 1
+  BUILD_SHARED_LIBS: 1
   matrix:
     - CMAKE_BUILD_TYPE: Debug
     - CMAKE_BUILD_TYPE: Release
