@@ -86,7 +86,6 @@ struct FlatPairStorage
                 }
             }
             alloc->Deallocate(array);
-            alloc->Deallocate(deleted);
             array = 0;
             deleted = 0;
         }
@@ -96,9 +95,9 @@ struct FlatPairStorage
     {
         Clear();
         if (n == 0) return;
-        array = (ElementType *)alloc->Allocate(n * sizeof(ElementType));
         auto num_bytes = (n + 7) >> 3;
-        deleted = (uint8_t *)alloc->Allocate(num_bytes);
+        array = (ElementType *)alloc->Allocate((n * sizeof(ElementType)) + num_bytes);
+        deleted = (uint8_t *)(array + n);
         for (size_t i = 0; i < num_bytes; ++i) deleted[i] = 0xFF;
         if (!array || !deleted) assert(false && "Failed to allocate memory");
         size = n;
@@ -129,6 +128,17 @@ class FlatHashMap
         auto cap = (size_t)(n/load_factor);
         storage.Reset(cap);
     }
+
+    template <class T>
+    struct Mover
+    {
+        static T && Act(T & v) { return std::move(v); }
+    };
+    template <class T>
+    struct Copier
+    {
+        static T const & Act(T & v) { return v; }
+    };
   public:
     FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.6) { }
 
@@ -136,6 +146,13 @@ class FlatHashMap
 
     using value_type = std::pair<K const, V>;
 
+  private:
+    template <class T>
+    using Transferrer = typename std::conditional<
+                            std::is_move_constructible<T>::value,
+                            Mover<T>, Copier<T>>::type;
+
+  public:
     using iterator = value_type *;
     using const_iterator = value_type const *;
 
@@ -169,6 +186,8 @@ class FlatHashMap
         return 0;
     }
 
+#define QUAD_PROBE
+
     // iterator erase(iterator where)
     // {
     //     assert(where >= begin() && where < begin() + capacity());
@@ -183,9 +202,17 @@ class FlatHashMap
         auto const & eq = E();
         auto array = storage.Array();
 
-        for (size_t num_checked = 0; num_checked < cap; ++num_checked)
+#ifndef QUAD_PROBE
+        for (size_t j = 0; j < cap; ++j)
+#else
+        for (size_t j = 0; j <= cap; ++j)
+#endif
         {
-            auto idx = (hash + num_checked) % cap;
+#ifndef QUAD_PROBE
+            auto idx = (hash + j) % cap;
+#else
+            auto idx = (hash + j*j) % cap;
+#endif
             if (!storage.IsDeleted(idx) && eq(array[idx].first, k))
             {
                 return reinterpret_cast<value_type *>(&array[idx]);
@@ -237,12 +264,10 @@ class FlatHashMap
             if (!storage.IsDeleted(i))
             {
                 auto & as_elem = *reinterpret_cast<iterator>(&array[i]);
-                new_map.InsertNoResize(std::move(as_elem));
+                new_map.InsertNoResize(Transferrer<value_type>::Act(as_elem));
             }
         }
     }
-
-//#define QUAD_PROBE
 
     std::pair<iterator, bool> InsertNoResize(value_type const & e)
     {
