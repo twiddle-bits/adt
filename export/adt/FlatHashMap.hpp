@@ -130,7 +130,7 @@ class FlatHashMap
         storage.Reset(cap);
     }
   public:
-    FlatHashMap(Allocator & a, float loadfac = 0.5) : storage(a), curr_size(0), load_factor(loadfac) { }
+    FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.6) { }
 
     void reserve(size_t n) { ReserveForSize(n); }
 
@@ -201,7 +201,7 @@ class FlatHashMap
             return InsertNoResize(e);
         }
 
-        FlatHashMap<K, V>  new_map(storage.Alloc());
+        FlatHashMap<K, V, H, E>  new_map(storage.Alloc());
         TransferElem(new_map);
         std::swap(new_map.storage, storage);
         std::swap(new_map.curr_size, curr_size);
@@ -217,7 +217,7 @@ class FlatHashMap
             return InsertNoResize(e);
         }
 
-        FlatHashMap<K, V>  new_map(storage.Alloc());
+        FlatHashMap<K, V, H, E>  new_map(storage.Alloc());
         TransferElem(new_map);
         std::swap(new_map.storage, storage);
         std::swap(new_map.curr_size, curr_size);
@@ -227,9 +227,9 @@ class FlatHashMap
     }
 
   private:
-    void TransferElem(FlatHashMap<K, V> & new_map)
+    void TransferElem(FlatHashMap<K, V, H, E> & new_map)
     {
-        new_map.reserve(storage.Size() == 0 ? 6 : storage.Size());
+        new_map.reserve(storage.Size() == 0 ? 8 : storage.Size());
         auto cap = storage.Size();
         auto array = storage.Array();
         for (size_t i = 0; i < cap; ++i)
@@ -242,15 +242,25 @@ class FlatHashMap
         }
     }
 
+//#define QUAD_PROBE
+
     std::pair<iterator, bool> InsertNoResize(value_type const & e)
     {
         auto cap = storage.Size();
         auto hash = H()(e.first) % cap;
         auto const & eq = E();
         auto array = storage.Array();
-        for (size_t num_checked = 0; num_checked < cap; ++num_checked)
+#ifndef QUAD_PROBE
+        for (size_t j = 0; j < cap; ++j)
+#else
+        for (size_t j = 0; j <= cap; ++j)
+#endif
         {
-            auto idx = (hash + num_checked) % cap;
+#ifndef QUAD_PROBE
+            auto idx = (hash + j) % cap;
+#else
+            auto idx = (hash + j*j) % cap;
+#endif
             if (storage.IsDeleted(idx))
             {
                 storage.SetDeleted(idx, false);
@@ -274,9 +284,17 @@ class FlatHashMap
         auto hash = H()(e.first) % cap;
         auto const & eq = E();
         auto array = storage.Array();
-        for (size_t num_checked = 0; num_checked < cap; ++num_checked)
+#ifndef QUAD_PROBE
+        for (size_t j = 0; j < cap; ++j)
+#else
+        for (size_t j = 0; j <= cap; ++j)
+#endif
         {
-            auto idx = (hash + num_checked) % cap;
+#ifndef QUAD_PROBE
+            auto idx = (hash + j) % cap;
+#else
+            auto idx = (hash + j*j) % cap;
+#endif
             if (storage.IsDeleted(idx))
             {
                 storage.SetDeleted(idx, false);
