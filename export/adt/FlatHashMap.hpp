@@ -63,18 +63,21 @@ struct FlatPairStorage
         return deleted[i >> 3] & (1 << (i & 7));
     }
 
-    void SetDeleted(size_t i, bool value)
+    void MarkAsDeleted(size_t i)
     {
-        uint8_t mask = 1 << (i & 7);
-        size_t idx = i >> 3;
-        deleted[idx] = (deleted[idx] & ~mask) | (mask * value);
+        deleted[i >> 3] |= (1 << (i & 7));
+    }
+    
+    void MarkAsUsed(size_t i)
+    {
+        deleted[i >> 3] &= ~(1 << (i & 7));
     }
 
     Allocator & Alloc() const { return *alloc; }
 
     void Clear()
     {
-        if (array)
+        if (deleted)
         {
             for (size_t i = 0; i < size; ++i)
             {
@@ -82,10 +85,9 @@ struct FlatPairStorage
                 {
                     array[i].first.~K();
                     array[i].second.~V();
-                    SetDeleted(i, true);
                 }
             }
-            alloc->Deallocate(array);
+            alloc->Deallocate(deleted);
             array = 0;
             deleted = 0;
         }
@@ -96,10 +98,11 @@ struct FlatPairStorage
         Clear();
         if (n == 0) return;
         auto num_bytes = (n + 7) >> 3;
-        array = (ElementType *)alloc->Allocate((n * sizeof(ElementType)) + num_bytes);
-        deleted = (uint8_t *)(array + n);
+        void * mem = alloc->Allocate((n * sizeof(ElementType)) + num_bytes);
+        deleted = (uint8_t *)(mem);
+        array = (ElementType *)(deleted + num_bytes);
+        assert(mem && "Failed to allocate memory");
         for (size_t i = 0; i < num_bytes; ++i) deleted[i] = 0xFF;
-        if (!array || !deleted) assert(false && "Failed to allocate memory");
         size = n;
     }
 
@@ -186,7 +189,7 @@ class FlatHashMap
         return 0;
     }
 
-#define QUAD_PROBE
+//#define QUAD_PROBE
 
     // iterator erase(iterator where)
     // {
@@ -241,7 +244,7 @@ class FlatHashMap
     {
         if (curr_size != 0 && (curr_size + 1 < (size_t)(storage.Size()*load_factor)))
         {
-            return InsertNoResize(e);
+            return InsertNoResize(std::forward<value_type>(e));
         }
 
         FlatHashMap<K, V, H, E>  new_map(storage.Alloc());
@@ -250,7 +253,7 @@ class FlatHashMap
         std::swap(new_map.curr_size, curr_size);
         std::swap(new_map.load_factor, load_factor);
 
-        return InsertNoResize(e);
+        return InsertNoResize(std::forward<value_type>(e));
     }
 
   private:
@@ -271,6 +274,7 @@ class FlatHashMap
 
     std::pair<iterator, bool> InsertNoResize(value_type const & e)
     {
+        //printf("By copy\n");
         auto cap = storage.Size();
         auto hash = H()(e.first) % cap;
         auto const & eq = E();
@@ -288,9 +292,10 @@ class FlatHashMap
 #endif
             if (storage.IsDeleted(idx))
             {
-                storage.SetDeleted(idx, false);
-                new ((void *)&array[idx].first) K(e.first);
-                new ((void *)&array[idx].second) V(e.second);
+                storage.MarkAsUsed(idx);
+                //new ((void *)&array[idx].first) K(e.first);
+                //new ((void *)&array[idx].second) V(e.second);
+                new ((void *)&array[idx]) value_type(e);
                 ++curr_size;
                 return std::make_pair(reinterpret_cast<value_type *>(&array[idx]), true);
             }
@@ -305,6 +310,7 @@ class FlatHashMap
 
     std::pair<iterator, bool> InsertNoResize(value_type && e)
     {
+        //printf("By move\n");
         auto cap = storage.Size();
         auto hash = H()(e.first) % cap;
         auto const & eq = E();
@@ -322,9 +328,10 @@ class FlatHashMap
 #endif
             if (storage.IsDeleted(idx))
             {
-                storage.SetDeleted(idx, false);
-                new ((void *)&array[idx].first) K(std::move(e.first));
-                new ((void *)&array[idx].second) V(std::move(e.second));
+                storage.MarkAsUsed(idx);
+                //new ((void *)&(array[idx].first))  K(std::move(e.first));
+                //new ((void *)&(array[idx].second)) V(std::move(e.second));
+                new ((void *)&array[idx]) value_type(std::forward<value_type>(e));
                 ++curr_size;
                 return std::make_pair(reinterpret_cast<value_type *>(&array[idx]), true);
             }
