@@ -48,6 +48,28 @@ void mapIntPerf(T & map, char const * name)
 }
 
 template <class T>
+void mapSizeTPerf(T & map, char const * name)
+{
+    auto t_start = std::chrono::high_resolution_clock::now();
+    // million insertions
+    for (size_t i = 0; i < N; ++i)
+    {
+        testThat(map.insert({i, i}).second);
+    }
+    auto t_insert = std::chrono::high_resolution_clock::now();
+    // 2 million finds
+    for (size_t i = 0; i < 2*N; ++i)
+    {
+        testThat(map.find(i % N)->second == (i % N));
+    }
+    auto t_find = std::chrono::high_resolution_clock::now();
+
+    std::cout << "\t" << name << "<size_t, size_t>:    " << std::setw(5)
+              << std::chrono::duration<double, std::micro>(t_insert-t_start).count()/N << ", "
+              << std::chrono::duration<double, std::micro>(t_find-t_insert).count()/N << "\n";
+}
+
+template <class T>
 void mapStringPerf(T & map, const char* name)
 {
     auto t_start = std::chrono::high_resolution_clock::now();
@@ -73,6 +95,8 @@ void flatHashPerf()
 {
     adt::FlatHashMap<int, int> map(a);
     mapIntPerf(map, "adt::FlatHashMap");
+    adt::FlatHashMap<size_t, size_t> mapSz(a);
+    mapSizeTPerf(mapSz, "adt::FlatHashMap");
     adt::FlatHashMap<std::string, int> mapStr(a);
     mapStringPerf(mapStr, "adt::FlatHashMap");
 }
@@ -81,6 +105,8 @@ void stdMapPerf()
 {
     std::map<int, int> map;
     mapIntPerf(map, "std::map");
+    std::map<size_t, size_t> mapSz;
+    mapSizeTPerf(mapSz, "std::map");
     std::map<std::string, int> mapStr;
     mapStringPerf(mapStr, "std::map");
 }
@@ -89,6 +115,8 @@ void stdUnordMapPerf()
 {
     std::unordered_map<int, int> map;
     mapIntPerf(map, "std::unordered_map");
+    std::unordered_map<size_t, size_t> mapSz;
+    mapSizeTPerf(mapSz, "std::unordered_map");
     std::unordered_map<std::string, int> mapStr;
     mapStringPerf(mapStr, "std::unordered_map");
 }

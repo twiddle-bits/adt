@@ -143,7 +143,7 @@ class FlatHashMap
         static T const & Act(T & v) { return v; }
     };
   public:
-    FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.6) { }
+    FlatHashMap(Allocator & a) : storage(a), curr_size(0), load_factor(0.55) { }
 
     void reserve(size_t n) { ReserveForSize(n); }
 
@@ -189,7 +189,7 @@ class FlatHashMap
         return 0;
     }
 
-//#define QUAD_PROBE
+#define QUAD_PROBE
 
     // iterator erase(iterator where)
     // {
@@ -260,6 +260,7 @@ class FlatHashMap
     void TransferElem(FlatHashMap<K, V, H, E> & new_map)
     {
         new_map.reserve(storage.Size() == 0 ? 8 : storage.Size());
+        //fprintf(stderr, "rehash!\n");
         auto cap = storage.Size();
         auto array = storage.Array();
         for (size_t i = 0; i < cap; ++i)
